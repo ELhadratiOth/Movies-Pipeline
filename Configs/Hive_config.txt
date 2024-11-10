@@ -1,0 +1,129 @@
+# Change to the home directory
+cd ~
+
+# Download the Apache Hive binary distribution from the official repository
+wget http://download.nust.na/pub2/apache/hive/hive-3.1.3/apache-hive-3.1.3-bin.tar.gz
+
+# Extract the downloaded Hive tarball
+tar -xvf apache-hive-3.1.3-bin.tar.gz
+
+# Navigate to the /usr/lib directory
+cd /usr/lib
+
+# Create a directory named 'hive' for installing Hive
+sudo mkdir hive
+
+# Move the extracted Hive directory to /usr/lib/hive
+cd ~
+mv apache-hive-3.1.3-bin /usr/lib/hive
+
+# Open the .bashrc file to add environment variables for Hive
+sudo nano ~/.bashrc
+
+# Set the HIVE_HOME environment variable to the location of the extracted Hive directory
+export HIVE_HOME=/usr/lib/hive/apache-hive-3.1.3-bin
+export HIVE_CONF_DIR=/usr/lib/hive/apache-hive-3.1.3-bin/conf
+# Add Hive, Hadoop, and Java bin directories to the system PATH variable
+PATH=$PATH:$JAVA_HOME/bin:$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$SQOOP_HOME/bin:$HIVE_HOME/bin
+
+# Reload the .bashrc file to apply the changes
+source .bashrc
+
+# Create the necessary directories in Hadoop's HDFS for Hive
+hdfs dfs -mkdir -p /bigdata/tmp
+hdfs dfs -mkdir -p /bigdata/hive/warehouse
+
+# Set write permissions for the Hadoop directories
+hdfs dfs -chmod g+w /bigdata/tmp
+hdfs dfs -chmod g+w /bigdata/hive/warehouse
+
+# Navigate to the Hive configuration directory
+cd $HIVE_HOME/conf
+
+# Copy the sample configuration file to the actual environment file
+cp hive-env.sh.template hive-env.sh
+
+# Open the hive-env.sh file to set Hadoop and Java home environment variables
+sudo nano hive-env.sh
+
+# Set the necessary environment variables for Hive in hive-env.sh
+export HIVE_CONF_DIR=/usr/lib/hive/apache-hive-3.1.3-bin/conf
+export HADOOP_HOME=/usr/lib/hadoop/hadoop-2.9.0
+export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64
+
+# Install MySQL server for storing Hive metadata
+sudo apt-get install mysql-server
+
+# Connect to MySQL and run queries to set up the metastore database
+# First, create a new database called 'metastore' and load the schema
+# This is to set up the metastore for Hive to store its metadata
+CREATE DATABASE metastore;
+USE metastore;
+SOURCE /usr/lib/hive/apache-hive-3.1.3-bin/scripts/metastore/upgrade/mysql/hive-schema-3.1.0.mysql.sql;
+
+# Create a user for Hive to connect to MySQL (for local or cloud implementation)
+CREATE USER 'hiveuser'@'localhost' IDENTIFIED BY 'hivepassword';  # for local
+CREATE USER 'hiveuser'@'%' IDENTIFIED BY 'hivepassword';  # for cloud
+
+# Grant privileges to the hiveuser
+GRANT ALL PRIVILEGES ON *.* TO 'hiveuser'@'%' WITH GRANT OPTION;
+
+# Apply the changes
+flush privileges;
+
+# Navigate to the Hive configuration directory again
+cd $HIVE_HOME/conf
+
+# Open the hive-site.xml file to configure Hive's connection to the metastore
+sudo nano hive-site.xml
+
+# Add necessary properties for connecting Hive to the MySQL metastore
+<configuration>
+   <property>
+      <name>javax.jdo.option.ConnectionURL</name>
+      <value>jdbc:mysql://localhost/metastore?createDatabaseIfNotExist=true</value>
+      <description>metadata is stored in a MySQL server</description>
+   </property>
+   <property>
+      <name>javax.jdo.option.ConnectionDriverName</name>
+      <value>com.mysql.jdbc.Driver</value>
+      <description>MySQL JDBC driver class</description>
+   </property>
+   <property>
+      <name>javax.jdo.option.ConnectionUserName</name>
+      <value>hiveuser</value>
+      <description>user name for connecting to mysql server</description>
+   </property>
+   <property>
+      <name>javax.jdo.option.ConnectionPassword</name>
+      <value>hivepassword</value>
+      <description>hivepassword for connecting to mysql server</description>
+   </property>
+   <property>
+        <name>hive.metastore.warehouse.dir</name>
+        <value>/bigdata/hive/warehouse</value>
+        <description>location of default database for the warehouse</description>
+    </property>
+    <property>
+        <name>hive.metastore.uris</name>
+        <value>thrift://localhost:9083</value>
+        <description>Thrift URI for the remote metastore.</description>
+    </property>
+    <property>
+        <name>hive.server2.enable.doAs</name>
+        <value>false</value>
+    </property>
+</configuration>
+
+# Move the MySQL connector JAR to Hive's lib directory
+cd ~
+cp mysql-connector-java-8.0.30.jar $HIVE_HOME/lib
+
+# Start Hive to verify everything is set up correctly
+hive
+
+
+
+# in case of using sqoop and hive :
+cd $HIVE_HOME/lib
+cp  hive-common-3.1.3.jar $SQOOP_HOME/lib

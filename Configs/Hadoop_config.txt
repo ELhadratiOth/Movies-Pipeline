@@ -1,0 +1,117 @@
+# Install OpenJDK 8 (Required for Hadoop)
+sudo apt-get update
+sudo apt-get install openjdk-8-jdk -y
+
+# Download Hadoop 2.9.0 version
+wget https://archive.apache.org/dist/hadoop/core/hadoop-2.9.0/hadoop-2.9.0.tar.gz
+
+# Extract the Hadoop tarball
+tar -xvf hadoop-2.9.0.tar.gz
+
+# Move Hadoop to the /usr/lib/hadoop directory
+sudo mv hadoop-2.9.0 /usr/lib/hadoop/
+
+# Set proper permissions (adjust as needed for your system)
+sudo chmod -R 755 /usr/lib/hadoop
+sudo chown -R ubuntu:ubuntu /usr/lib/hadoop
+
+# Add Hadoop and Java environment variables to the bashrc file
+nano ~/.bashrc
+
+# Add the following to the ~/.bashrc file:
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+export PATH=$PATH:$JAVA_HOME/bin
+
+export HADOOP_HOME=/usr/lib/hadoop/hadoop-2.9.0
+export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
+export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin
+
+# Apply the changes to the shell
+source ~/.bashrc
+
+# Generate SSH key pairs (if not already done) 
+ssh-keygen -t rsa
+
+# Add public key to authorized_keys to allow password-less SSH login
+cd ~
+cat .ssh/id_rsa.pub >> .ssh/authorized_keys
+
+# Copy SSH key to localhost for password-less login
+ssh-copy-id -i .ssh/id_rsa.pub ubuntu@localhost
+
+# Create a directory for Hadoop data storage
+mkdir -p ~/hadoopdata
+chmod 777 ~/hadoopdata
+chown -R ubuntu:ubuntu ~/hadoopdata
+
+# Configure Hadoop: core-site.xml
+# Hadoop core-site.xml configuration to set default file system
+nano $HADOOP_HOME/etc/hadoop/core-site.xml
+<configuration>
+    <property>
+        <name>fs.defaultFS</name>
+        <value>hdfs://localhost:9000</value>
+    </property>
+</configuration>
+
+# Configure Hadoop: hdfs-site.xml
+# Set directories for Hadoop NameNode and DataNode
+nano $HADOOP_HOME/etc/hadoop/hdfs-site.xml
+<configuration>
+    <property>
+        <name>dfs.replication</name>
+        <value>1</value> <!-- Set replication to 1 for simplicity -->
+    </property>
+
+    <property>
+        <name>dfs.namenode.name.dir</name>
+        <value>/home/ubuntu/hadoopdata/hdfs/name</value> <!-- NameNode directory -->
+    </property>
+
+    <property>
+        <name>dfs.datanode.data.dir</name>
+        <value>/home/ubuntu/hadoopdata/hdfs/data</value> <!-- DataNode directory -->
+    </property>
+</configuration>
+
+# Configure Hadoop: mapred-site.xml
+# Set MapReduce framework to YARN
+nano $HADOOP_HOME/etc/hadoop/mapred-site.xml
+<configuration>
+    <property>
+        <name>mapreduce.framework.name</name>
+        <value>yarn</value> <!-- Use YARN for MapReduce -->
+    </property>
+</configuration>
+
+# Configure Hadoop: yarn-site.xml
+# Configure YARN settings
+nano $HADOOP_HOME/etc/hadoop/yarn-site.xml
+<configuration>
+    <!-- YARN ResourceManager and NodeManager settings -->
+    <property>
+        <name>yarn.nodemanager.aux-services</name>
+        <value>mapreduce_shuffle</value> <!-- Enable MapReduce shuffle service -->
+    </property>
+
+    <property>
+        <name>yarn.nodemanager.auxservices.mapreduce.shuffle.class</name>
+        <value>org.apache.hadoop.mapred.ShuffleHandler</value> <!-- Shuffle handler class -->
+    </property>
+</configuration>
+
+# Format HDFS (run as Hadoop user if needed)
+$HADOOP_HOME/bin/hdfs namenode -format
+
+# Start HDFS and YARN services
+start-dfs.sh
+start-yarn.sh
+
+# Check the status of the HDFS and YARN services
+jps  # To check Java processes running
+
+# Web UIs to monitor Hadoop services (check in browser):
+# NameNode: http://aws_ip_address:50070
+# DataNode: http://aws_ip_address:50075
+# Secondary NameNode: http://aws_ip_address:50090
+# ResourceManager: http://aws_ip_address:8088

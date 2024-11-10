@@ -1,0 +1,5 @@
+1- the problem here is the  size of  th img (it is  grather then 500mb) 
+and also  doenst work for a the  public  repos it  works only for the  private ones
+
+
+2- what i get from this exp is how  to  create  an img  using  docker and  push it  in the  ECR  using aws CLI

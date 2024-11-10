@@ -1,0 +1,52 @@
+# Change to the home directory
+cd ~
+
+# Download the Sqoop binary distribution for Hadoop 2.6.0 from the official Apache archive
+wget https://archive.apache.org/dist/sqoop/1.4.7/sqoop-1.4.7.bin__hadoop-2.6.0.tar.gz
+
+# Extract the downloaded Sqoop tarball
+tar -xvf sqoop-1.4.7.bin__hadoop-2.6.0.tar.gz
+
+# Navigate to the /usr/lib directory
+cd /usr/lib
+
+# Create a directory named 'sqoop' to install Sqoop
+mkdir sqoop
+
+# Move the extracted Sqoop directory to the /usr/lib/sqoop directory
+mv ~/sqoop-1.4.7.bin__hadoop-2.6.0 .
+
+# Open the .bashrc file in the nano text editor to add environment variables
+sudo nano ~/.bashrc
+
+# Set the SQOOP_HOME environment variable to the location of the extracted Sqoop directory
+export SQOOP_HOME=/usr/lib/sqoop/sqoop-1.4.7.bin__hadoop-2.6.0
+
+# Add Sqoop, Hadoop, and Java bin directories to the system PATH variable
+export PATH=$PATH:$JAVA_HOME/bin:$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$SQOOP_HOME/bin
+
+# Reload the .bashrc file to apply the changes
+source .bashrc
+
+# Download the MySQL JDBC connector needed for Sqoop to communicate with MySQL
+wget https://repo1.maven.org/maven2/mysql/mysql-connector-java/8.0.30/mysql-connector-java-8.0.30.jar
+
+# Copy the MySQL JDBC connector to Sqoop's lib directory
+cp mysql-connector-java-8.0.30.jar $SQOOP_HOME/lib
+
+# Navigate to the Sqoop configuration directory
+cd  $SQOOP_HOME/conf
+
+# Rename the template environment file to the actual configuration file
+mv sqoop-env-template.sh sqoop-env.sh
+
+# Open the Sqoop environment configuration file in nano editor to set Hadoop and Java environment variables
+nano sqoop-env.sh
+
+# Set the HADOOP_COMMON_HOME, HADOOP_MAPRED_HOME, and JAVA_HOME environment variables in sqoop-env.sh
+export HADOOP_COMMON_HOME=/usr/lib/hadoop/hadoop-2.9.0
+export HADOOP_MAPRED_HOME=/usr/lib/hadoop/hadoop-2.9.0
+export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64
+
+# Verify that Sqoop is installed correctly by checking the version
+sqoop version
